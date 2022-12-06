@@ -1,74 +1,74 @@
-const img = document.querySelectorAll('img')
-const imgArray = Array.from(img)
 
-const loader = document.querySelectorAll('.lds-dual-ring');
-const loaderArray = Array.from(img)
+getWeather('Chicago'); 
 
-
-const divCity = document.querySelector('#city')
-const imgCity = divCity.querySelector('img');
-const headingCity = divCity.querySelector('h1');
-
-
-const divTemp = document.querySelector('#temp')
-const imgTemp = divTemp.querySelector('img');
-const headingTemp = divTemp.querySelector('h1');
-
-
-const divSky = document.querySelector('#weather')
-const imgSky = divSky.querySelector('img');
-const headingSky = divSky.querySelector('h1');
-
-
-const divWind = document.querySelector('#wind')
-const imgWind = divWind.querySelector('img');
-const headingWind = divWind.querySelector('h1');
-
-function renderDiv(){
-    let body = document.getElementsByTagName('main')
+function renderDiv(responseData){
+    // console.log(responseData[0]) // Heading text
+    // console.log(responseData[1].data.images.original.url)// Gif src
+    let content = document.getElementById('content')
+    // console.log(content.innerHTML)
+    // if (content.childNodes.length === 0) {
+    //     console.log('✅ Element is empty');
+    //   } else {
+    //     console.log('⛔️ Element is NOT empty');
+    //   }
 
     let div = document.createElement('div')
     let heading = document.createElement('h1')
+    heading.innerHTML = responseData[0];
+
     let img = document.createElement('img');
+    img.src = responseData[1].data.images.original.url;
+
     let divLoader = document.createElement('div');
     divLoader.classList.add('lds-dual-ring')
 
-    div.appendChild(div)
     div.appendChild(heading)
     div.appendChild(img)
-    div.appendChild(divLoader)
+    // div.appendChild(divLoader)
+    // content.removeChild(div);
+    content.appendChild(div)
 
-    imgSky.src = skyResponse.data.images.original.url;
-    headingSky.innerHTML = `${element} weather`;
 }
 
 
-async function getWeather(){
-    img.forEach(element => {
-        element.style.display = 'none';
-    });
+async function getWeather(input){
 
+    let content = document.getElementById('content')
+    if (content.childNodes.length === 0) {
+        console.log('✅ Element is empty');
+      } else {
+        console.log('⛔️ Element is NOT empty',content.childNodes);
+        let child = content.lastElementChild
+        while(child){
+            content.removeChild(child);
+            child = content.lastElementChild
+
+        }
+      }
+
+
+    const loader = document.querySelectorAll('.lds-dual-ring');
     loader.forEach(element => {
         element.style.display = 'block';
     });
     
-    const inputVal = document.querySelector('input').value;
-
-    const data = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${inputVal}&appid=5dd5cc4a80a9feabbc954532502d6e3d`, {mode: 'cors'});
+    const data = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${input}&appid=5dd5cc4a80a9feabbc954532502d6e3d`, {mode: 'cors'});
     const response = await data.json()
 
-    getCity(response);
-    getTemp(response);
-    getSky(response.weather[0].main);
-    getWind(response);
 
-    img.forEach(element => {
-        element.style.display = 'block';
+    Promise.all([getCity(response), getTemp(response), getSky(response), getWind(response)]).then(values => {
+        // console.log(values)
+        for(let element of values){
+            renderDiv(element);
+        }
+        loader.forEach(element => {
+            element.style.display = 'none';
+        });
     });
 
-    loader.forEach(element => {
-        element.style.display = 'none';
-    });
+
+
+
     
     // console.log(response)
     // console.log('City ', response.name)
@@ -80,9 +80,10 @@ async function getWeather(){
 async function getCity(element){
     const gifCity = await fetch(`https://api.giphy.com/v1/gifs/translate?api_key=MjM6Afn8IsjJ2xj9QQ6e7Eu6FzEBtIR2&s=${element.name}`, {mode: 'cors'})
     const cityResponse = await gifCity.json();
-
-    imgCity.src = cityResponse.data.images.original.url;
-    headingCity.innerHTML = element.name;
+    
+    // let src = cityResponse.data.images.original.url;
+    // headingCity.innerHTML = element.name;
+    return [element.name, cityResponse];
 }
 
 async function getTemp(element){
@@ -98,16 +99,18 @@ async function getTemp(element){
     const gifTemp = await fetch(`https://api.giphy.com/v1/gifs/translate?api_key=MjM6Afn8IsjJ2xj9QQ6e7Eu6FzEBtIR2&s=${searchTemp}`, {mode: 'cors'})
     const tempResponse = await gifTemp.json();
 
-    imgTemp.src = tempResponse.data.images.original.url;
-    headingTemp.innerHTML = `Temperature ${celcius} C`;
+    // imgTemp.src = tempResponse.data.images.original.url;
+    let textTemp = `Temperature ${celcius} C`;
+    return [textTemp, tempResponse]
 }
 
 async function getSky(element){
-    const gifSky = await fetch(`https://api.giphy.com/v1/gifs/translate?api_key=MjM6Afn8IsjJ2xj9QQ6e7Eu6FzEBtIR2&s=${element}`, {mode: 'cors'})
+    const gifSky = await fetch(`https://api.giphy.com/v1/gifs/translate?api_key=MjM6Afn8IsjJ2xj9QQ6e7Eu6FzEBtIR2&s=${element.weather[0].main}`, {mode: 'cors'})
     const skyResponse = await gifSky.json();
 
-    imgSky.src = skyResponse.data.images.original.url;
-    headingSky.innerHTML = `${element} weather`;
+    // imgSky.src = skyResponse.data.images.original.url;
+    let textSky = `${element.weather[0].main} weather`;
+    return [textSky, skyResponse]
 }
 
 async function getWind(element){
@@ -120,55 +123,56 @@ async function getWind(element){
     const gifWind = await fetch(`https://api.giphy.com/v1/gifs/translate?api_key=MjM6Afn8IsjJ2xj9QQ6e7Eu6FzEBtIR2&s=${searchWind}`, {mode: 'cors'})
     const windResponse = await gifWind.json();
 
-    imgWind.src = windResponse.data.images.original.url;
-    headingWind.innerHTML = `${searchWind} wind`;
+    // imgWind.src = windResponse.data.images.original.url;
+    let textWind = `${searchWind} wind`;
+    return [textWind, windResponse]
 }
 
-(async function firstTime(){
+// (async function firstTime(){
 
-    img.forEach(element => {
-        element.style.display = 'none';
-    });
+//     img.forEach(element => {
+//         element.style.display = 'none';
+//     });
 
-    loader.forEach(element => {
-        element.style.display = 'block';
-    });
+//     loader.forEach(element => {
+//         element.style.display = 'block';
+//     });
 
-    const gifCity = await fetch(`https://api.giphy.com/v1/gifs/translate?api_key=MjM6Afn8IsjJ2xj9QQ6e7Eu6FzEBtIR2&s=city`, {mode: 'cors'})
-    const cityResponse = await gifCity.json();
+//     const gifCity = await fetch(`https://api.giphy.com/v1/gifs/translate?api_key=MjM6Afn8IsjJ2xj9QQ6e7Eu6FzEBtIR2&s=city`, {mode: 'cors'})
+//     const cityResponse = await gifCity.json();
 
-    imgCity.src = cityResponse.data.images.original.url;
-
-
-    const gifTemp = await fetch(`https://api.giphy.com/v1/gifs/translate?api_key=MjM6Afn8IsjJ2xj9QQ6e7Eu6FzEBtIR2&s=temperature`, {mode: 'cors'})
-    const tempResponse = await gifTemp.json();
-    imgTemp.src = tempResponse.data.images.original.url;
+//     imgCity.src = cityResponse.data.images.original.url;
 
 
-    const gifWeather = await fetch(`https://api.giphy.com/v1/gifs/translate?api_key=MjM6Afn8IsjJ2xj9QQ6e7Eu6FzEBtIR2&s=weather`, {mode: 'cors'})
-    const weatherResponse = await gifWeather.json();
+//     const gifTemp = await fetch(`https://api.giphy.com/v1/gifs/translate?api_key=MjM6Afn8IsjJ2xj9QQ6e7Eu6FzEBtIR2&s=temperature`, {mode: 'cors'})
+//     const tempResponse = await gifTemp.json();
+//     imgTemp.src = tempResponse.data.images.original.url;
 
-    imgSky.src = weatherResponse.data.images.original.url;
 
-    const gifWind = await fetch(`https://api.giphy.com/v1/gifs/translate?api_key=MjM6Afn8IsjJ2xj9QQ6e7Eu6FzEBtIR2&s=wiwnd`, {mode: 'cors'})
-    const windResponse = await gifWind.json();
+//     const gifWeather = await fetch(`https://api.giphy.com/v1/gifs/translate?api_key=MjM6Afn8IsjJ2xj9QQ6e7Eu6FzEBtIR2&s=weather`, {mode: 'cors'})
+//     const weatherResponse = await gifWeather.json();
 
-    imgWind.src = windResponse.data.images.original.url;
+//     imgSky.src = weatherResponse.data.images.original.url;
 
-    img.forEach(element => {
-        element.style.display = 'block';
-    });
+//     const gifWind = await fetch(`https://api.giphy.com/v1/gifs/translate?api_key=MjM6Afn8IsjJ2xj9QQ6e7Eu6FzEBtIR2&s=wiwnd`, {mode: 'cors'})
+//     const windResponse = await gifWind.json();
 
-    loader.forEach(element => {
-        element.style.display = 'none';
-    });
+//     imgWind.src = windResponse.data.images.original.url;
 
-})();
+//     img.forEach(element => {
+//         element.style.display = 'block';
+//     });
+
+//     loader.forEach(element => {
+//         element.style.display = 'none';
+//     });
+
+// })();
 
 
 document.querySelector('input').addEventListener('keypress', function (e) {
     if (e.key === 'Enter') {
         e.preventDefault();
-        getWeather();
+        getWeather(document.querySelector('input').value);
     }
 });
